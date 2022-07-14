@@ -18,6 +18,9 @@ on:
       build_type:
         required: true
         type: string
+      deploy_environment:
+        required: false
+        type: string
       s3_bucket_name:
         required: true
         type: string
@@ -34,6 +37,7 @@ env:
   BUILD_DIRECTORY: ./build
   BUILD_SCRIPTS_CACHE_KEY: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
   BUILD_TYPE: ${{ inputs.build_type }}
+  HOOKS_DIRECTORY: ./.github/hooks
   REMOTE_SCRIPT_DIRECTORY: ./deploy_actions/.github/scripts
   S3_BUCKET_NAME: ${{ inputs.s3_bucket_name }}
   TARGET_BUILD: ref-${{ github.sha }}.${{ inputs.build_type }}
@@ -63,19 +67,19 @@ jobs:
 
           echo "::set-output name=S3_BUILD_DIRECTORY::$s3_build_directory"
           echo "::set-output name=S3_BUILD_KEY::$s3_build_key"
-      - name: Checking-out scripts
+      - name: Checking-out remote scripts
         uses: actions/checkout@v3
         with:
-          repository: cicona/deploy_actions
+          repository: oshopgiri/deploy_actions
           ref: master
           path: deploy_actions
-      - name: Making scripts executable
+      - name: Making remote scripts executable
         run: |
           for script in $(find $REMOTE_SCRIPT_DIRECTORY -name '*.sh');
           do
             chmod +x $script
           done
-      - name: Caching scripts
+      - name: Caching remote scripts
         uses: actions/cache@v3
         with:
           path: deploy_actions
@@ -104,7 +108,19 @@ jobs:
         with:
           repository: ${{ github.repository }}
           ref: ${{ github.ref }}
-      - name: Reading scripts from cache
+      - name: Making hooks executable
+        run: |
+          for script in $(find $HOOKS_DIRECTORY -name '*.sh');
+          do
+            chmod +x $script
+          done
+      - name: Running pre-build hook
+        run: |
+          script=$HOOKS_DIRECTORY/pre_build.sh
+          if test -f "$script"; then
+            $HOOKS_DIRECTORY/pre_build.sh ${{ inputs.deploy_environment }}
+          fi
+      - name: Reading remote scripts from cache
         uses: actions/cache@v3
         with:
           path: deploy_actions
@@ -135,7 +151,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ inputs.aws_region }}
-      - name: Reading scripts from cache
+      - name: Reading remote scripts from cache
         uses: actions/cache@v3
         with:
           path: deploy_actions
