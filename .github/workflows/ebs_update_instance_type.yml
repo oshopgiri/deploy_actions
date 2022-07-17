@@ -37,7 +37,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ inputs.aws_region }}
-      - name: Updating configuration: Instance Type
+      - name: Updating configuration - Instance Type
         run: |
           aws elasticbeanstalk update-environment \
             --environment-name $AWS_EBS_ENVIRONMENT_NAME \
