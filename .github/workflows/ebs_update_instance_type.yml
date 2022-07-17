@@ -1,0 +1,44 @@
+name: ebs
+
+on:
+  workflow_call:
+    inputs:
+      aws_ebs_environment_name:
+        required: true
+        type: string
+      aws_ebs_instance_type:
+        required: true
+        type: string
+      aws_region:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+env:
+  AWS_EBS_ENVIRONMENT_NAME: ${{ inputs.aws_ebs_environment_name }}
+  AWS_EBS_INSTANCE_TYPE: ${{ inputs.aws_ebs_instance_type }}
+
+jobs:
+  update_instance_type:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Logging run context
+        run: |
+          echo "user: ${{ github.actor }},
+          updating EBS environment: $AWS_EBS_ENVIRONMENT_NAME,
+          instance type to: $AWS_EBS_INSTANCE_TYPE"
+      - name: Configuring AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws_region }}
+      - name: Updating configuration: Instance Type
+        run: |
+          aws elasticbeanstalk update-environment \
+            --environment-name $AWS_EBS_ENVIRONMENT_NAME \
+            --option-settings "Namespace=aws:autoscaling:launchconfiguration,OptionName=InstanceType,Value=$AWS_EBS_INSTANCE_TYPE"
